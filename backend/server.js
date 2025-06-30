@@ -112,32 +112,31 @@
 import 'dotenv/config';
 import express from 'express';
 import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-import app from './app.js'; // Your express routes
+import app from './app.js';
 import projectModel from './models/project.model.js';
 import { generateResult } from './services/ai.service.js';
 
 const port = process.env.PORT || 3000;
 
-// Needed to resolve __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 👇 Add frontend static folder
+// Required for SharedArrayBuffer (cross-origin isolation)
 app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   next();
 });
 
+// Serve frontend
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// 👇 Fallback to index.html for SPA routing
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
@@ -147,7 +146,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: '*',
-  methods: [ 'GET', 'POST' ]
+    methods: ['GET', 'POST']
   }
 });
 
@@ -175,36 +174,36 @@ io.use(async (socket, next) => {
 });
 
 io.on('connection', socket => {
-  socket.roomId = socket.project._id.toString();
-  console.log('a user connected');
-  socket.join(socket.roomId);
+  const roomId = socket.project._id.toString();
+  socket.join(roomId);
+  console.log(`User joined room ${roomId}`);
 
   socket.on('project-message', async data => {
-    const message = data.message;
-    const aiIsPresentInMessage = message.includes('@ai');
+    const { message } = data;
+    const hasAI = message.includes('@ai');
 
-    socket.broadcast.to(socket.roomId).emit('project-message', data);
+    socket.broadcast.to(roomId).emit('project-message', data);
 
-    if (aiIsPresentInMessage) {
+    if (hasAI) {
       const prompt = message.replace('@ai', '');
       const result = await generateResult(prompt);
 
-      io.to(socket.roomId).emit('project-message', {
+      io.to(roomId).emit('project-message', {
         message: result,
         sender: {
           _id: 'ai',
-          email: 'AI',
+          email: 'AI'
         }
       });
     }
   });
 
   socket.on('disconnect', () => {
-    console.log('user disconnected');
-    socket.leave(socket.roomId);
+    socket.leave(roomId);
+    console.log(`User left room ${roomId}`);
   });
 });
 
 server.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server listening on port ${port}`);
 });
