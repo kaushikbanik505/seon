@@ -146,7 +146,8 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: 'https://seon-ai.onrender.com', // frontend domain
+    origin: 'https://seon-6trpt07v6-kaushiks-projects-ff16c783.vercel.app', 
+    credentials: true,// frontend domain
   }
 });
 
