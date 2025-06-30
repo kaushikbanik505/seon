@@ -146,9 +146,8 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: 'https://seon-6trpt07v6-kaushiks-projects-ff16c783.vercel.app', 
-      methods: "GET,POST,PUT,DELETE",
-    credentials: true,// frontend domain
+    origin: '*',
+  methods: [ 'GET', 'POST' ]
   }
 });
 
